@@ -38,6 +38,23 @@ class Bitacora(BaseModel):
     class Config:
         orm_mode = True
 
+class BitacoraResponse(BaseModel):
+    id_bitacora: int
+    comentario: str
+    km_inicial: float
+    km_final: float
+    num_galones: float
+    costo: float
+    tipo_gasolina: str
+    id_usuario: int
+    id_vehiculo: int
+    id_gasolinera: int
+    id_proyecto: int
+    created_at: Optional[datetime]
+
+    class Config:
+        orm_mode = True
+
 class Vehiculo(BaseModel):
     modelo: str
     marca: str
@@ -50,7 +67,31 @@ class Vehiculo(BaseModel):
     class Config:
         orm_mode = True
 
+class VehiculoResponse(BaseModel):
+    id_vehiculo: int
+    modelo: str
+    marca: str
+    placa: str
+    rendimineto: float
+    galonaje: float
+    tipo_combustible: str
+    created_at: Optional[datetime]
+
+    class Config:
+        orm_mode = True
+
+
 class Proyecto(BaseModel):
+    #id_proyecto: int
+    created_at: Optional[datetime]
+    nombre: str
+    direccion: str
+    activo: int
+
+    class Config:
+        orm_mode = True
+
+class ProyectoResponse(BaseModel):
     id_proyecto: int
     created_at: Optional[datetime]
     nombre: str
@@ -61,6 +102,15 @@ class Proyecto(BaseModel):
         orm_mode = True
 
 class Gasolinera(BaseModel):
+    #id_gasolinera: int
+    created_at: Optional[datetime]
+    nombre: str
+    direccion: str
+
+    class Config:
+        orm_mode = True
+
+class GasolineraResponse(BaseModel):
     id_gasolinera: int
     created_at: Optional[datetime]
     nombre: str
@@ -70,6 +120,13 @@ class Gasolinera(BaseModel):
         orm_mode = True
 
 class Rol(BaseModel):
+    #id_rol: int
+    descripcion: str
+
+    class Config:
+        orm_mode = True
+
+class RolResponse(BaseModel):
     id_rol: int
     descripcion: str
 
@@ -77,6 +134,15 @@ class Rol(BaseModel):
         orm_mode = True
 
 class Log(BaseModel):
+    #id_log: int
+    created_at: Optional[datetime]
+    descripcion: str
+    id_user: int
+
+    class Config:
+        orm_mode = True
+
+class LogResponse(BaseModel):
     id_log: int
     created_at: Optional[datetime]
     descripcion: str
@@ -84,3 +150,4 @@ class Log(BaseModel):
 
     class Config:
         orm_mode = True
+

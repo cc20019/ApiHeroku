@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException
 from config.db import conn
 from models.models import usuarios, bitacora, vehiculo, proyecto, gasolineras, rol, log
-from schemas.schemas import Usuario, UsuarioResponse, Bitacora, Vehiculo, Proyecto, Gasolinera, Rol, Log
+from schemas.schemas import Usuario, UsuarioResponse, Bitacora, BitacoraResponse, Vehiculo, VehiculoResponse, Proyecto, ProyectoResponse, Gasolinera, GasolineraResponse, Rol, RolResponse, Log, LogResponse
 from cryptography.fernet import Fernet
 from datetime import datetime
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
@@ -86,8 +86,9 @@ def delete_user(id: int):
 
 
 #-----------------BITACORAS------------------------------------------ 
+
 # Ruta para crear una nueva bitácora
-@bitacora_router.post("/bitacoras/", response_model=Bitacora, tags=["bitacoras"])
+@bitacora_router.post("/bitacoras/", response_model=BitacoraResponse, tags=["bitacoras"])
 def create_bitacora(entry: Bitacora):
     new_entry = entry.dict()
     new_entry["created_at"] = new_entry.get("created_at") or datetime.utcnow()
@@ -99,7 +100,7 @@ def create_bitacora(entry: Bitacora):
         created_bitacora = conn.execute(select(bitacora).where(bitacora.c.id_bitacora == result.lastrowid)).mappings().first()
         
         if created_bitacora:
-            return Bitacora(**created_bitacora)
+            return BitacoraResponse(**created_bitacora)  # Se devuelve BitacoraResponse con el ID generado
     except IntegrityError as e:
         raise HTTPException(status_code=400, detail=f"Error de integridad: {str(e)}")
     except Exception as e:
@@ -107,16 +108,16 @@ def create_bitacora(entry: Bitacora):
 
 
 # Ruta para obtener todas las bitácoras
-@bitacora_router.get("/bitacoras/", response_model=list[Bitacora], tags=["bitacoras"])
+@bitacora_router.get("/bitacoras/", response_model=list[BitacoraResponse], tags=["bitacoras"])
 def get_all_bitacoras():
     try:
         result = conn.execute(bitacora.select()).mappings().fetchall()
-        return [Bitacora(**row) for row in result]
+        return [BitacoraResponse(**row) for row in result]  # Devuelve las bitácoras con su ID
     except SQLAlchemyError as e:
         raise HTTPException(status_code=500, detail=f"Error al obtener las bitácoras: {str(e)}")
 
-# Extrar bitacoras por id
-@bitacora_router.get("/bitacoras/{id}", response_model=Bitacora, tags=["bitacoras"])
+# Extraer bitácoras por id
+@bitacora_router.get("/bitacoras/{id}", response_model=BitacoraResponse, tags=["bitacoras"])
 def get_bitacora_by_id(id: int):
     try:
         # Realiza la consulta para obtener la bitácora por ID
@@ -126,11 +127,10 @@ def get_bitacora_by_id(id: int):
         if not bitacora_data:
             raise HTTPException(status_code=404, detail="Bitácora no encontrada")
         
-        # Devuelve la bitácora como un objeto Pydantic
-        return Bitacora(**bitacora_data)
+        # Devuelve la bitácora como un objeto Pydantic con el ID
+        return BitacoraResponse(**bitacora_data)
     except SQLAlchemyError as e:
         raise HTTPException(status_code=500, detail=f"Error al obtener la bitácora: {str(e)}")
-
 
 # Eliminar una bitácora
 @bitacora_router.delete("/bitacoras/{id}", status_code=204, tags=["bitacoras"])
@@ -150,22 +150,27 @@ def delete_bitacora(id: int):
         raise HTTPException(status_code=500, detail="Error al eliminar la bitácora")
 
 
+
 # Actualizar una bitácora
-@bitacora_router.put("/bitacoras/{id}", response_model=Bitacora, tags=["bitacoras"])
+@bitacora_router.put("/bitacoras/{id}", response_model=BitacoraResponse, tags=["bitacoras"])
 def update_bitacora(id: int, entry: Bitacora):
     update_data = entry.dict()
     update_data["updated_at"] = datetime.utcnow()
     
     try:
+        # Ejecuta la actualización de la bitácora con el ID especificado
         result = conn.execute(bitacora.update().values(update_data).where(bitacora.c.id_bitacora == id))
         conn.commit()
         
+        # Si no se encuentra la bitácora, lanza un error 404
         if result.rowcount == 0:
             raise HTTPException(status_code=404, detail="Bitácora no encontrada")
         
+        # Recupera la bitácora actualizada con su ID
         updated_bitacora = conn.execute(select(bitacora).where(bitacora.c.id_bitacora == id)).mappings().first()
         if updated_bitacora:
-            return Bitacora(**updated_bitacora)
+            # Devuelve la bitácora actualizada como un objeto Pydantic con el ID
+            return BitacoraResponse(**updated_bitacora)
     except IntegrityError as e:
         raise HTTPException(status_code=400, detail=f"Error de integridad: {str(e)}")
     except SQLAlchemyError as e:
@@ -173,9 +178,10 @@ def update_bitacora(id: int, entry: Bitacora):
 
 
 
+
 #---------------------VEHICULO-------------------------
 # Crear un nuevo vehiculo
-@vehiculo_router.post("/vehiculos/", response_model=Vehiculo, tags=["vehiculos"])
+@vehiculo_router.post("/vehiculos/", response_model=VehiculoResponse, tags=["vehiculos"])
 def create_vehiculo(entry: Vehiculo):
     new_entry = entry.dict()
     new_entry["created_at"] = new_entry.get("created_at") or datetime.utcnow()
@@ -185,7 +191,7 @@ def create_vehiculo(entry: Vehiculo):
         conn.commit()
         created_vehiculo = conn.execute(select(vehiculo).where(vehiculo.c.id_vehiculo == result.lastrowid)).mappings().first()
         if created_vehiculo:
-            return Vehiculo(**created_vehiculo)
+            return VehiculoResponse(**created_vehiculo)
     except IntegrityError as e:
         raise HTTPException(status_code=400, detail=f"Error de integridad: {str(e)}")
     except Exception as e:
@@ -193,25 +199,26 @@ def create_vehiculo(entry: Vehiculo):
 
 
 # Obtener todos los vehiculos
-@vehiculo_router.get("/vehiculos/", response_model=list[Vehiculo], tags=["vehiculos"])
+@vehiculo_router.get("/vehiculos/", response_model=list[VehiculoResponse], tags=["vehiculos"])
 def get_all_vehiculos():
     try:
         result = conn.execute(vehiculo.select()).mappings().fetchall()
-        return [Vehiculo(**row) for row in result]
+        return [VehiculoResponse(**row) for row in result]
     except SQLAlchemyError as e:
         raise HTTPException(status_code=500, detail=f"Error al obtener los vehículos: {str(e)}")
 
 
 # Obtener un vehiculo por ID
-@vehiculo_router.get("/vehiculos/{id}", response_model=Vehiculo, tags=["vehiculos"])
+@vehiculo_router.get("/vehiculos/{id}", response_model=VehiculoResponse, tags=["vehiculos"])
 def get_vehiculo(id: int):
     vehiculo_data = conn.execute(vehiculo.select().where(vehiculo.c.id_vehiculo == id)).first()
     if not vehiculo_data:
         raise HTTPException(status_code=404, detail="Vehículo no encontrado")
-    return Vehiculo(**dict(vehiculo_data))
+    return VehiculoResponse(**dict(vehiculo_data))
+
 
 # Actualizar un vehiculo por ID
-@vehiculo_router.put("/vehiculos/{id}", response_model=Vehiculo, tags=["vehiculos"])
+@vehiculo_router.put("/vehiculos/{id}", response_model=VehiculoResponse, tags=["vehiculos"])
 def update_vehiculo(id: int, entry: Vehiculo):
     update_data = entry.dict()
     update_data["updated_at"] = datetime.utcnow()
@@ -219,13 +226,13 @@ def update_vehiculo(id: int, entry: Vehiculo):
     try:
         result = conn.execute(vehiculo.update().values(update_data).where(vehiculo.c.id_vehiculo == id))
         conn.commit()
-        
+
         if result.rowcount == 0:
             raise HTTPException(status_code=404, detail="Vehículo no encontrado")
-        
+
         updated_vehiculo = conn.execute(select(vehiculo).where(vehiculo.c.id_vehiculo == id)).mappings().first()
         if updated_vehiculo:
-            return Vehiculo(**updated_vehiculo)
+            return VehiculoResponse(**updated_vehiculo)
     except IntegrityError as e:
         raise HTTPException(status_code=400, detail=f"Error de integridad: {str(e)}")
     except SQLAlchemyError as e:
@@ -241,19 +248,21 @@ def delete_vehiculo(id: int):
         raise HTTPException(status_code=404, detail="Vehículo no encontrado")
     return {"mensaje": "Vehículo eliminado correctamente"}
 
+
 #----------------Proyectos----------------------
-# Para extraer todos los proyecto
-@proyecto_router.get("/proyectos/", response_model=list[Proyecto], tags=["proyectos"])
+
+# Para extraer todos los proyectos
+@proyecto_router.get("/proyectos/", response_model=list[ProyectoResponse], tags=["proyectos"])
 def get_all_proyectos():
     try:
         result = conn.execute(proyecto.select()).mappings().fetchall()
-        return [Proyecto(**row) for row in result]
+        return [ProyectoResponse(**row) for row in result]
     except SQLAlchemyError as e:
         raise HTTPException(status_code=500, detail=f"Error al obtener los proyectos: {str(e)}")
 
 
 # Para crear un nuevo proyecto
-@proyecto_router.post("/proyectos/", response_model=Proyecto, tags=["proyectos"])
+@proyecto_router.post("/proyectos/", response_model=ProyectoResponse, tags=["proyectos"])
 def create_proyecto(entry: Proyecto):
     new_entry = entry.dict()
     new_entry["created_at"] = new_entry.get("created_at") or datetime.utcnow()
@@ -263,25 +272,27 @@ def create_proyecto(entry: Proyecto):
         conn.commit()
         created_proyecto = conn.execute(select(proyecto).where(proyecto.c.id_proyecto == result.lastrowid)).mappings().first()
         if created_proyecto:
-            return Proyecto(**created_proyecto)
+            return ProyectoResponse(**created_proyecto)
     except IntegrityError as e:
         raise HTTPException(status_code=400, detail=f"Error de integridad: {str(e)}")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error del servidor: {str(e)}")
 
-# Estraer un proyecto por id 
-@proyecto_router.get("/proyectos/{id}", response_model=Proyecto, tags=["proyectos"])
+
+# Extraer un proyecto por id
+@proyecto_router.get("/proyectos/{id}", response_model=ProyectoResponse, tags=["proyectos"])
 def get_proyecto_by_id(id: int):
     try:
         proyecto_data = conn.execute(select(proyecto).where(proyecto.c.id_proyecto == id)).mappings().first()
         if not proyecto_data:
             raise HTTPException(status_code=404, detail="Proyecto no encontrado")
-        return Proyecto(**proyecto_data)
+        return ProyectoResponse(**proyecto_data)
     except SQLAlchemyError as e:
         raise HTTPException(status_code=500, detail=f"Error al obtener el proyecto: {str(e)}")
 
+
 # Actualizar proyecto
-@proyecto_router.put("/proyectos/{id}", response_model=Proyecto, tags=["proyectos"])
+@proyecto_router.put("/proyectos/{id}", response_model=ProyectoResponse, tags=["proyectos"])
 def update_proyecto(id: int, entry: Proyecto):
     update_data = entry.dict()
     update_data["updated_at"] = datetime.utcnow()  # Marca de tiempo para actualizaciones
@@ -293,11 +304,12 @@ def update_proyecto(id: int, entry: Proyecto):
             raise HTTPException(status_code=404, detail="Proyecto no encontrado")
         updated_proyecto = conn.execute(select(proyecto).where(proyecto.c.id_proyecto == id)).mappings().first()
         if updated_proyecto:
-            return Proyecto(**updated_proyecto)
+            return ProyectoResponse(**updated_proyecto)
     except IntegrityError as e:
         raise HTTPException(status_code=400, detail=f"Error de integridad: {str(e)}")
     except SQLAlchemyError as e:
         raise HTTPException(status_code=500, detail=f"Error al actualizar el proyecto: {str(e)}")
+
 
 # Eliminar un proyecto
 @proyecto_router.delete("/proyectos/{id}", status_code=204, tags=["proyectos"])
@@ -311,18 +323,20 @@ def delete_proyecto(id: int):
     except SQLAlchemyError as e:
         raise HTTPException(status_code=500, detail=f"Error al eliminar el proyecto: {str(e)}")
 
+
 #----------------GASOLINERAS--------------------------
+
 # Obtener todas las gasolineras
-@gasolineras_router.get("/gasolineras/", response_model=list[Gasolinera], tags=["gasolineras"])
+@gasolineras_router.get("/gasolineras/", response_model=list[GasolineraResponse], tags=["gasolineras"])
 def get_all_gasolineras():
     try:
         result = conn.execute(gasolineras.select()).mappings().fetchall()
-        return [Gasolinera(**row) for row in result]
+        return [GasolineraResponse(**row) for row in result]
     except SQLAlchemyError as e:
         raise HTTPException(status_code=500, detail=f"Error al obtener las gasolineras: {str(e)}")
 
-#Crear gasolinera
-@gasolineras_router.post("/gasolineras/", response_model=Gasolinera, tags=["gasolineras"])
+# Crear gasolinera
+@gasolineras_router.post("/gasolineras/", response_model=GasolineraResponse, tags=["gasolineras"])
 def create_gasolinera(entry: Gasolinera):
     new_entry = entry.dict()
     new_entry["created_at"] = new_entry.get("created_at") or datetime.utcnow()
@@ -332,14 +346,14 @@ def create_gasolinera(entry: Gasolinera):
         conn.commit()
         created_gasolinera = conn.execute(select(gasolineras).where(gasolineras.c.id_gasolinera == result.lastrowid)).mappings().first()
         if created_gasolinera:
-            return Gasolinera(**created_gasolinera)
+            return GasolineraResponse(**created_gasolinera)
     except IntegrityError as e:
         raise HTTPException(status_code=400, detail=f"Error de integridad: {str(e)}")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error del servidor: {str(e)}")
 
-#actualizar gasolinera
-@gasolineras_router.put("/gasolineras/{id}", response_model=Gasolinera, tags=["gasolineras"])
+# Actualizar gasolinera
+@gasolineras_router.put("/gasolineras/{id}", response_model=GasolineraResponse, tags=["gasolineras"])
 def update_gasolinera(id: int, entry: Gasolinera):
     update_data = entry.dict()
     update_data["updated_at"] = datetime.utcnow()  # Marca de tiempo de actualización
@@ -351,23 +365,23 @@ def update_gasolinera(id: int, entry: Gasolinera):
             raise HTTPException(status_code=404, detail="Gasolinera no encontrada")
         updated_gasolinera = conn.execute(select(gasolineras).where(gasolineras.c.id_gasolinera == id)).mappings().first()
         if updated_gasolinera:
-            return Gasolinera(**updated_gasolinera)
+            return GasolineraResponse(**updated_gasolinera)
     except IntegrityError as e:
         raise HTTPException(status_code=400, detail=f"Error de integridad: {str(e)}")
     except SQLAlchemyError as e:
         raise HTTPException(status_code=500, detail=f"Error al actualizar la gasolinera")
 
-# Obtener por ID
-@gasolineras_router.get("/gasolineras/{id}", response_model=Gasolinera, tags=["gasolineras"])
+# Obtener gasolinera por ID
+@gasolineras_router.get("/gasolineras/{id}", response_model=GasolineraResponse, tags=["gasolineras"])
 def get_gasolinera_by_id(id: int):
     try:
         gasolinera_data = conn.execute(select(gasolineras).where(gasolineras.c.id_gasolinera == id)).mappings().first()
         if not gasolinera_data:
             raise HTTPException(status_code=404, detail="Gasolinera no encontrada")
-        return Gasolinera(**gasolinera_data)
+        return GasolineraResponse(**gasolinera_data)
     except SQLAlchemyError as e:
         raise HTTPException(status_code=500, detail=f"Error al obtener la gasolinera: {str(e)}")
-    
+
 # Eliminar gasolinera
 @gasolineras_router.delete("/gasolineras/{id}", status_code=204, tags=["gasolineras"])
 def delete_gasolinera(id: int):
@@ -382,17 +396,18 @@ def delete_gasolinera(id: int):
 
 
 #----------------ROLES------------------
-#Obtener todos los roles
-@rol_router.get("/roles/", response_model=list[Rol], tags=["roles"])
+
+# Obtener todos los roles
+@rol_router.get("/roles/", response_model=list[RolResponse], tags=["roles"])
 def get_all_roles():
     try:
         result = conn.execute(rol.select()).mappings().fetchall()
-        return [Rol(**row) for row in result]
+        return [RolResponse(**row) for row in result]
     except SQLAlchemyError as e:
         raise HTTPException(status_code=500, detail=f"Error al obtener los roles: {str(e)}")
 
-#crear roles
-@rol_router.post("/roles/", response_model=Rol, tags=["roles"])
+# Crear rol
+@rol_router.post("/roles/", response_model=RolResponse, tags=["roles"])
 def create_rol(entry: Rol):
     new_entry = entry.dict()
 
@@ -401,14 +416,14 @@ def create_rol(entry: Rol):
         conn.commit()
         created_rol = conn.execute(select(rol).where(rol.c.id_rol == result.lastrowid)).mappings().first()
         if created_rol:
-            return Rol(**created_rol)
+            return RolResponse(**created_rol)
     except IntegrityError as e:
         raise HTTPException(status_code=400, detail=f"Error de integridad: {str(e)}")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error del servidor: {str(e)}")
 
-#Actualizar roles
-@rol_router.put("/roles/{id}", response_model=Rol, tags=["roles"])
+# Actualizar rol
+@rol_router.put("/roles/{id}", response_model=RolResponse, tags=["roles"])
 def update_rol(id: int, entry: Rol):
     update_data = entry.dict()
 
@@ -419,25 +434,24 @@ def update_rol(id: int, entry: Rol):
             raise HTTPException(status_code=404, detail="Rol no encontrado")
         updated_rol = conn.execute(select(rol).where(rol.c.id_rol == id)).mappings().first()
         if updated_rol:
-            return Rol(**updated_rol)
+            return RolResponse(**updated_rol)
     except IntegrityError as e:
         raise HTTPException(status_code=400, detail=f"Error de integridad: {str(e)}")
     except SQLAlchemyError as e:
         raise HTTPException(status_code=500, detail=f"Error al actualizar el rol: {str(e)}")
 
-
-#obtener rol por id
-@rol_router.get("/roles/{id}", response_model=Rol, tags=["roles"])
+# Obtener rol por id
+@rol_router.get("/roles/{id}", response_model=RolResponse, tags=["roles"])
 def get_rol_by_id(id: int):
     try:
         rol_data = conn.execute(select(rol).where(rol.c.id_rol == id)).mappings().first()
         if not rol_data:
             raise HTTPException(status_code=404, detail="Rol no encontrado")
-        return Rol(**rol_data)
+        return RolResponse(**rol_data)
     except SQLAlchemyError as e:
         raise HTTPException(status_code=500, detail=f"Error al obtener el rol: {str(e)}")
-    
-# Elimibar rol
+
+# Eliminar rol
 @rol_router.delete("/roles/{id}", status_code=204, tags=["roles"])
 def delete_rol(id: int):
     try:
@@ -449,27 +463,25 @@ def delete_rol(id: int):
     except SQLAlchemyError as e:
         raise HTTPException(status_code=500, detail=f"Error al eliminar el rol: {str(e)}")
 
+
 #-----------------LOGS--------------------------
 
-#Obtener todos los log
-@log_router.get("/logs/", response_model=list[Log], tags=["logs"])
+# Obtener todos los logs
+@log_router.get("/logs/", response_model=list[LogResponse], tags=["logs"])
 def get_all_logs():
     try:
         result = conn.execute(log.select()).mappings().fetchall()
-        return [Log(**row) for row in result]
+        return [LogResponse(**row) for row in result]
     except SQLAlchemyError as e:
         raise HTTPException(status_code=500, detail=f"Error al obtener los logs: {str(e)}")
 
-
-#Obtener lo logs por id
-@log_router.get("/logs/{id}", response_model=Log, tags=["logs"])
+# Obtener un log por ID
+@log_router.get("/logs/{id}", response_model=LogResponse, tags=["logs"])
 def get_log_by_id(id: int):
     try:
         log_data = conn.execute(select(log).where(log.c.id_log == id)).mappings().first()
         if not log_data:
             raise HTTPException(status_code=404, detail="Log no encontrado")
-        return Log(**log_data)
+        return LogResponse(**log_data)
     except SQLAlchemyError as e:
         raise HTTPException(status_code=500, detail=f"Error al obtener el log: {str(e)}")
-
-

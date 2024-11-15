@@ -1,7 +1,8 @@
 from sqlalchemy import create_engine, MetaData
 from sqlalchemy.orm import sessionmaker
 
-DATABASE_URL = "mysql+pymysql://waldo:133843@localhost:3306/trabajofinalFBD"
+# Usando directamente la URL de conexión de Railway
+DATABASE_URL = "mysql+pymysql://root:TmyoKsSywRvSqIHWOEPSpOJoJLUudwpz@junction.proxy.rlwy.net:27665/railway"
 
 engine = create_engine(DATABASE_URL, echo=True)
 meta = MetaData()
