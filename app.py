@@ -12,6 +12,3 @@ app.include_router(gasolineras_router)
 app.include_router(rol_router)
 app.include_router(log_router)
 
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="127.0.0.1", port=8000)
