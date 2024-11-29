@@ -303,14 +303,26 @@ def get_proyecto_by_id(id: int):
 # Actualizar proyecto
 @proyecto_router.put("/proyectos/{id}", response_model=ProyectoResponse, tags=["proyectos"])
 def update_proyecto(id: int, entry: Proyecto):
-    update_data = entry.dict()
-    update_data["updated_at"] = datetime.utcnow()  # Marca de tiempo para actualizaciones
+    # Convertir los datos de entrada en un diccionario
+    update_data = entry.dict(exclude_unset=True)  # Excluir campos no establecidos
+
+    # Si el campo `created_at` está presente, lo eliminamos ya que no lo queremos actualizar
+    if "created_at" in update_data:
+        del update_data["created_at"]
+    
+    # Establecer automáticamente `updated_at` en el backend
+    update_data["updated_at"] = datetime.utcnow()  # Actualizamos `updated_at` con la fecha actual
 
     try:
+        # Realizar la actualización en la base de datos
         result = conn.execute(proyecto.update().values(update_data).where(proyecto.c.id_proyecto == id))
         conn.commit()
+
+        # Si no se actualizó ningún registro, arrojar un error
         if result.rowcount == 0:
             raise HTTPException(status_code=404, detail="Proyecto no encontrado")
+
+        # Obtener el proyecto actualizado
         updated_proyecto = conn.execute(select(proyecto).where(proyecto.c.id_proyecto == id)).mappings().first()
         if updated_proyecto:
             return ProyectoResponse(**updated_proyecto)
@@ -318,6 +330,7 @@ def update_proyecto(id: int, entry: Proyecto):
         raise HTTPException(status_code=400, detail=f"Error de integridad: {str(e)}")
     except SQLAlchemyError as e:
         raise HTTPException(status_code=500, detail=f"Error al actualizar el proyecto: {str(e)}")
+
 
 
 # Eliminar un proyecto
