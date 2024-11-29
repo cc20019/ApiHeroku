@@ -217,19 +217,28 @@ def get_vehiculo(id: int):
     return VehiculoResponse(**dict(vehiculo_data))
 
 
-# Actualizar un vehiculo por ID
 @vehiculo_router.put("/vehiculos/{id}", response_model=VehiculoResponse, tags=["vehiculos"])
 def update_vehiculo(id: int, entry: Vehiculo):
-    update_data = entry.dict()
-    update_data["updated_at"] = datetime.utcnow()
+    # Convertir los datos del vehiculo en un diccionario, excluyendo `created_at` ya que lo actualizaremos automáticamente
+    update_data = entry.dict(exclude_unset=True)  # Excluir campos no establecidos
+
+    # Si el campo `updated_at` está en los datos, lo eliminamos ya que no queremos que lo envíen
+    if "updated_at" in update_data:
+        del update_data["updated_at"]
+    
+    # Actualizamos `created_at` con la fecha y hora actual
+    update_data["created_at"] = datetime.utcnow()  # Actualizamos la fecha de creación (sin que el usuario lo envíe)
 
     try:
+        # Realizar la actualización del vehículo
         result = conn.execute(vehiculo.update().values(update_data).where(vehiculo.c.id_vehiculo == id))
         conn.commit()
 
+        # Si no se actualizó ningún registro, arrojar un error
         if result.rowcount == 0:
             raise HTTPException(status_code=404, detail="Vehículo no encontrado")
 
+        # Obtener el vehículo actualizado
         updated_vehiculo = conn.execute(select(vehiculo).where(vehiculo.c.id_vehiculo == id)).mappings().first()
         if updated_vehiculo:
             return VehiculoResponse(**updated_vehiculo)
