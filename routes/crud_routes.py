@@ -19,6 +19,35 @@ log_router = APIRouter()
 key = Fernet.generate_key()
 cipher = Fernet(key)
 
+login_router = APIRouter()
+
+# Generar la clave de encriptación
+key = Fernet.generate_key()
+cipher = Fernet(key)
+
+def verify_password(encrypted_password: str, plain_password: str) -> bool:
+    try:
+        return cipher.decrypt(encrypted_password.encode()).decode() == plain_password
+    except:
+        return False
+
+@login_router.post("/login", tags=["Auth"])
+def login(username: str, password: str):
+    # Buscar el usuario en la base de datos
+    user_data = conn.execute(
+        select(usuarios).where(usuarios.c.username == username)
+    ).mappings().first()
+
+    if not user_data:
+        raise HTTPException(status_code=401, detail="Usuario no encontrado")
+
+    # Verificar la contraseña
+    if not verify_password(user_data["password"], password):
+        raise HTTPException(status_code=401, detail="Contraseña incorrecta")
+
+    return {"message": "Inicio de sesión exitoso", "user_id": user_data["id_usuario"]}
+
+
 # Crear usuario
 @user.post("/usuarios/", response_model=UsuarioResponse, tags=["Usuarios"])
 def create_user(user: Usuario):
