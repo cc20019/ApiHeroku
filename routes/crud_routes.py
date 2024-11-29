@@ -300,25 +300,23 @@ def get_proyecto_by_id(id: int):
         raise HTTPException(status_code=500, detail=f"Error al obtener el proyecto: {str(e)}")
 
 
-# Actualizar proyecto
 @proyecto_router.put("/proyectos/{id}", response_model=ProyectoResponse, tags=["proyectos"])
 def update_proyecto(id: int, entry: Proyecto):
-    # Convertir los datos de entrada en un diccionario
-    update_data = entry.dict(exclude_unset=True)  # Excluir campos no establecidos
+    # Convertir el objeto de entrada en un diccionario
+    update_data = entry.dict(exclude_unset=True)  # Excluir los campos no establecidos
 
-    # Si el campo `created_at` está presente, lo eliminamos ya que no lo queremos actualizar
-    if "created_at" in update_data:
-        del update_data["created_at"]
+    # Asegurarnos de que 'updated_at' no se incluya, ya que no existe en la base de datos
+    if "updated_at" in update_data:
+        del update_data["updated_at"]
     
-    # Establecer automáticamente `updated_at` en el backend
-    update_data["updated_at"] = datetime.utcnow()  # Actualizamos `updated_at` con la fecha actual
+    # Solo actualizar 'created_at' si es necesario (si la base de datos requiere que se pase)
+    update_data["created_at"] = datetime.utcnow()  # Mantener el campo 'created_at' actualizado
 
     try:
-        # Realizar la actualización en la base de datos
+        # Ejecutar la actualización en la base de datos
         result = conn.execute(proyecto.update().values(update_data).where(proyecto.c.id_proyecto == id))
         conn.commit()
 
-        # Si no se actualizó ningún registro, arrojar un error
         if result.rowcount == 0:
             raise HTTPException(status_code=404, detail="Proyecto no encontrado")
 
