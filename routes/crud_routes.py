@@ -52,14 +52,10 @@ def get_user(id: int):
     return UsuarioResponse(**result)
 
 
-# Clave para cifrar la contraseña (esto debe ser guardado de manera segura en producción)
-key = b'your_key_here'  # Reemplaza con tu clave secreta para el cifrado
-cipher = Fernet(key)
-
 # Actualizar usuario
 @user.put("/usuarios/{id}", response_model=UsuarioResponse, tags=["Usuarios"])
 def update_user(id: int, user: Usuario):
-    encrypted_password = cipher.encrypt(user.password.encode())  # Cifrado de la contraseña
+    encrypted_password = cipher.encrypt(user.password.encode())
     update_data = {
         "nombre": user.nombre,
         "apellido": user.apellido,
