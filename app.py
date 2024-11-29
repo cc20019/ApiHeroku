@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from routes.crud_routes import login_router, user, bitacora_router, vehiculo_router, proyecto_router, gasolineras_router, rol_router, log_router  # Importa ambos routers correctamente
+from routes.crud_routes import user, bitacora_router, vehiculo_router, proyecto_router, gasolineras_router, rol_router, log_router  # Importa ambos routers correctamente
 
 app = FastAPI()
 
@@ -11,5 +11,4 @@ app.include_router(proyecto_router)
 app.include_router(gasolineras_router)
 app.include_router(rol_router)
 app.include_router(log_router)
-app.include_router(login_router) 
 
