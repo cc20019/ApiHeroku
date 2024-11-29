@@ -364,21 +364,34 @@ def create_gasolinera(entry: Gasolinera):
 # Actualizar gasolinera
 @gasolineras_router.put("/gasolineras/{id}", response_model=GasolineraResponse, tags=["gasolineras"])
 def update_gasolinera(id: int, entry: Gasolinera):
-    update_data = entry.dict()
-    update_data["updated_at"] = datetime.utcnow()  # Marca de tiempo de actualización
+    # Convertir los datos de la gasolinera en un diccionario, excluyendo `created_at` ya que lo actualizamos automáticamente
+    update_data = entry.dict(exclude_unset=True)  # Excluir campos no establecidos
+
+    # Si el campo `updated_at` está en los datos, lo eliminamos ya que no queremos que lo envíen
+    if "updated_at" in update_data:
+        del update_data["updated_at"]
+    
+    # Actualizamos `created_at` con la fecha y hora actual (sin que el usuario lo envíe)
+    update_data["created_at"] = datetime.utcnow()  # Actualizamos la fecha de creación
 
     try:
+        # Realizar la actualización de la gasolinera
         result = conn.execute(gasolineras.update().values(update_data).where(gasolineras.c.id_gasolinera == id))
         conn.commit()
+
+        # Si no se actualizó ningún registro, arrojar un error
         if result.rowcount == 0:
             raise HTTPException(status_code=404, detail="Gasolinera no encontrada")
+
+        # Obtener la gasolinera actualizada
         updated_gasolinera = conn.execute(select(gasolineras).where(gasolineras.c.id_gasolinera == id)).mappings().first()
         if updated_gasolinera:
             return GasolineraResponse(**updated_gasolinera)
     except IntegrityError as e:
         raise HTTPException(status_code=400, detail=f"Error de integridad: {str(e)}")
     except SQLAlchemyError as e:
-        raise HTTPException(status_code=500, detail=f"Error al actualizar la gasolinera")
+        raise HTTPException(status_code=500, detail=f"Error al actualizar la gasolinera: {str(e)}")
+
 
 # Obtener gasolinera por ID
 @gasolineras_router.get("/gasolineras/{id}", response_model=GasolineraResponse, tags=["gasolineras"])
