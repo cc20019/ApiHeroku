@@ -154,9 +154,16 @@ def delete_bitacora(id: int):
 # Actualizar una bitácora
 @bitacora_router.put("/bitacoras/{id}", response_model=BitacoraResponse, tags=["bitacoras"])
 def update_bitacora(id: int, entry: Bitacora):
-    update_data = entry.dict()
-    update_data["updated_at"] = datetime.utcnow()
+    # Convertir los datos de la bitácora en un diccionario
+    update_data = entry.dict(exclude_unset=True)  # Excluir campos no establecidos
     
+    # No enviamos 'updated_at' porque se actualizará automáticamente en el backend
+    if "updated_at" in update_data:
+        del update_data["updated_at"]
+    
+    # Establecemos la fecha de creación (created_at) con la fecha y hora actuales
+    update_data["created_at"] = datetime.utcnow().isoformat()  # Actualizamos la fecha de creación (sin que el usuario lo envíe)
+
     try:
         # Ejecuta la actualización de la bitácora con el ID especificado
         result = conn.execute(bitacora.update().values(update_data).where(bitacora.c.id_bitacora == id))
