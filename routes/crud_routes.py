@@ -15,24 +15,56 @@ gasolineras_router = APIRouter()
 rol_router = APIRouter()
 log_router = APIRouter()
 
+from fastapi import Depends
+from passlib.context import CryptContext
+from pydantic import BaseModel
+
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
+# Inicializa el context de hashing
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+# Función para verificar la contraseña
+def verify_password(plain_password, hashed_password):
+    return pwd_context.verify(plain_password, hashed_password)
+
+# Ruta para el inicio de sesión
+@user.post("/login/")
+def login(request: LoginRequest):
+    user = conn.execute(usuarios.select().where(usuarios.c.username == request.username)).mappings().first()
+    if user is None or not verify_password(request.password, user["password"]):
+        raise HTTPException(status_code=400, detail="Usuario o contraseña incorrectos")
+    
+    return {"message": "Inicio de sesión exitoso", "user_id": user["id_usuario"]}
+
 # Generar la clave de encriptación
 key = Fernet.generate_key()
 cipher = Fernet(key)
 
 # Crear usuario
+def hash_password(password):
+    return pwd_context.hash(password)
+
+# Crear usuario
 @user.post("/usuarios/", response_model=UsuarioResponse, tags=["Usuarios"])
 def create_user(user: Usuario):
-    encrypted_password = cipher.encrypt(user.password.encode())
+    # Hashear la contraseña en lugar de cifrarla
+    hashed_password = hash_password(user.password)
+    
     new_user = {
         "nombre": user.nombre,
         "apellido": user.apellido,
-        "password": encrypted_password,
+        "password": hashed_password,  # Usa la contraseña hasheada
         "id_rol": user.id_rol,
         "activo": user.activo,
         "username": user.username,
     }
+    
     result = conn.execute(usuarios.insert().values(new_user))
     conn.commit()
+    
     created_user = conn.execute(usuarios.select().where(usuarios.c.id_usuario == result.lastrowid)).mappings().first()
     return UsuarioResponse(**created_user)
 
@@ -55,22 +87,29 @@ def get_user(id: int):
 # Actualizar usuario
 @user.put("/usuarios/{id}", response_model=UsuarioResponse, tags=["Usuarios"])
 def update_user(id: int, user: Usuario):
-    encrypted_password = cipher.encrypt(user.password.encode())
+    # Hashear la contraseña en lugar de cifrarla
+    hashed_password = hash_password(user.password) if user.password else None
+    
     update_data = {
         "nombre": user.nombre,
         "apellido": user.apellido,
-        "password": encrypted_password,
         "id_rol": user.id_rol,
         "activo": user.activo,
         "username": user.username,
     }
+    
+    # Solo agrega la contraseña al diccionario de actualización si se proporciona
+    if hashed_password:
+        update_data["password"] = hashed_password
+
     result = conn.execute(usuarios.update().values(update_data).where(usuarios.c.id_usuario == id))
     conn.commit()
+    
     if result.rowcount == 0:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
+    
     updated_user = conn.execute(usuarios.select().where(usuarios.c.id_usuario == id)).mappings().first()
     return UsuarioResponse(**updated_user)
-
 
 # Eliminar usuario
 @user.delete("/usuarios/{id}", status_code=204, tags=["Usuarios"])
